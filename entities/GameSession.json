@@ -1,0 +1,77 @@
+{
+  "name": "GameSession",
+  "type": "object",
+  "properties": {
+    "current_week": {
+      "type": "number",
+      "description": "Current week in the growing season (1-14)"
+    },
+    "crop_type": {
+      "type": "string",
+      "enum": [
+        "rice",
+        "wheat"
+      ],
+      "description": "Type of crop being grown"
+    },
+    "soil_moisture": {
+      "type": "number",
+      "description": "Current soil moisture level (0-100)"
+    },
+    "growth_stage": {
+      "type": "string",
+      "enum": [
+        "seedling",
+        "vegetative",
+        "reproductive",
+        "maturity"
+      ],
+      "description": "Current growth stage of the crop"
+    },
+    "health_score": {
+      "type": "number",
+      "description": "Overall crop health (0-100)"
+    },
+    "total_yield": {
+      "type": "number",
+      "description": "Final yield in kg/hectare"
+    },
+    "decisions": {
+      "type": "array",
+      "description": "History of player decisions each week",
+      "items": {
+        "type": "object",
+        "properties": {
+          "week": {
+            "type": "number"
+          },
+          "action": {
+            "type": "string"
+          },
+          "climate_data": {
+            "type": "object"
+          },
+          "outcome": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "game_status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "completed"
+      ],
+      "default": "active",
+      "description": "Current status of the game"
+    }
+  },
+  "required": [
+    "current_week",
+    "crop_type",
+    "soil_moisture",
+    "growth_stage",
+    "health_score"
+  ]
+}
