@@ -28,8 +28,42 @@ const GROWTH_STAGES = {
   }
 };
 
-export default function FarmPlot({ growthStage, soilMoisture, healthScore, climateData, isNight = false }) {
+export default function FarmPlot({ growthStage, soilMoisture, healthScore, climateData, climateHistory = [], currentWeek = 1, climateSourceInfo = null, isNight = false }) {
   const stage = GROWTH_STAGES[growthStage] || GROWTH_STAGES.seedling;
+
+  const formatDateRange = (start, end) => {
+    try {
+      if (!start || !end) return '';
+      const s = `${start.substring(0,4)}-${start.substring(4,6)}-${start.substring(6,8)}`;
+      const e = `${end.substring(0,4)}-${end.substring(4,6)}-${end.substring(6,8)}`;
+      const sd = new Date(s);
+      const ed = new Date(e);
+      const options = { month: 'short' };
+      if (sd.getFullYear() === ed.getFullYear()) {
+        return `${sd.toLocaleString('en-US', options)} to ${ed.toLocaleString('en-US', options)} ${sd.getFullYear()}`;
+      }
+      return `${sd.toLocaleString('en-US', options)} ${sd.getFullYear()} to ${ed.toLocaleString('en-US', options)} ${ed.getFullYear()}`;
+    } catch (e) {
+      return '';
+    }
+  };
+
+  // Friendly label for the climate data source
+  const dataSourceLabel = (() => {
+    if (!climateSourceInfo) return 'Data source: unknown';
+    const { source, start, end } = climateSourceInfo;
+    if (source === 'fallback') return 'Data from: Fallback simulated data';
+    if (source === 'mixed') return `Data from: MIXED (API + simulated) - ${formatDateRange(start, end)}`;
+    if (source === 'NASA Power API') return `Data from: NASA Power API - ${formatDateRange(start, end)}`;
+    if (source && source.startsWith('local')) {
+      // For local files show compact month-year range when available
+      if (start && end) return `Data from: ${formatDateRange(start, end)}`;
+      const m = source.match(/local-(\d{4})/);
+      if (m) return `Data from: ${m[1]}`;
+      return 'Data source: local';
+    }
+    return 'Data source: unknown';
+  })();
   
   const getSoilColor = () => {
     if (soilMoisture > 80) return '#92400e'; // Too wet, dark brown
@@ -46,8 +80,8 @@ export default function FarmPlot({ growthStage, soilMoisture, healthScore, clima
       <div
         className="relative rounded-3xl shadow-2xl bg-no-repeat bg-center bg-cover flex flex-col justify-end"
         style={{
-          // If resting (isNight) show nightfield, else use rainfield for heavy rainfall (>90mm) or normal field.
-          backgroundImage: isNight ? `url('/images/nightfield.png')` : (climateData && climateData.rainfall > 90 ? `url('/images/rainfield.png')` : `url('/images/field.png')`),
+          // If resting (isNight) show nightfield, else use rainfield for rainfall > 40mm or normal field.
+          backgroundImage: isNight ? `url('/images/nightfield.png')` : (climateData && climateData.rainfall > 40 ? `url('/images/rainfield.png')` : `url('/images/field.png')`),
           minHeight: '450px',
           paddingTop: '32px',
           paddingLeft: '32px',
@@ -75,8 +109,22 @@ export default function FarmPlot({ growthStage, soilMoisture, healthScore, clima
           <div className="absolute inset-0 bg-blue-400/20 rounded-b-3xl pointer-events-none" />
         )}
 
+        {/* Small data source line above stage/health */}
+        <div
+          className="absolute top-2 left-4 right-4 bg-white/90 backdrop-blur-sm rounded-xl px-3 py-1 shadow-sm text-xs flex items-center justify-between cursor-pointer"
+          onClick={() => {
+            try {
+              console.log('Climate history:', climateHistory);
+              console.log('Climate source info:', climateSourceInfo);
+            } catch (e) {}
+          }}
+        >
+          <div className="text-xs text-gray-600">{dataSourceLabel}</div>
+          <div className="text-xs text-gray-600">Week {currentWeek}</div>
+        </div>
+
         {/* Stage Label and Health Indicator in same line, smaller and on top */}
-        <div className="absolute top-2 left-4 right-4 flex justify-between items-center bg-white/90 backdrop-blur-sm rounded-xl px-3 py-1 shadow-lg text-sm">
+        <div className="absolute top-20 left-4 right-4 flex justify-between items-center bg-white/90 backdrop-blur-sm rounded-xl px-3 py-1 shadow-lg text-sm">
           <div>
             <div className="font-semibold text-gray-900">{stage.label}</div>
             <div className="text-xs text-gray-600">{stage.description}</div>

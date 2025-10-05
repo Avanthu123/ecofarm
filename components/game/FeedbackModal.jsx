@@ -6,6 +6,15 @@ import { Button } from '@/components/ui/button';
 export default function FeedbackModal({ feedback, onClose }) {
   if (!feedback) return null;
 
+  // Choose a character image based on feedback type:
+  // success -> bluebird (right), warning -> redbird (left), otherwise farmer (left)
+  const chosen = (() => {
+    if (feedback.type === 'success') return { name: 'bluebird', src: '/images/bluebird.png', corner: 'right' };
+    if (feedback.type === 'warning') return { name: 'redbird', src: '/images/redbird.png', corner: 'left' };
+    // default / info / rest / natural growth cases
+    return { name: 'normalman', src: '/images/normalman.PNG', corner: 'left' };
+  })();
+
   const getIcon = () => {
     switch (feedback.type) {
       case 'warning':
@@ -44,6 +53,12 @@ export default function FeedbackModal({ feedback, onClose }) {
           className={`bg-gradient-to-br ${getBgColor()} rounded-3xl shadow-2xl max-w-lg w-full p-8 relative`}
           onClick={(e) => e.stopPropagation()}
         >
+          {/* Decorative character placed at left or right based on chosen.corner */}
+          <img
+            src={chosen.src}
+            alt={chosen.name}
+            className={`absolute ${chosen.corner === 'right' ? 'right-0' : 'left-0'} bottom-6 w-36 h-36 md:w-36 md:h-36 object-contain pointer-events-none`} 
+          />
           <button
             onClick={onClose}
             className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"

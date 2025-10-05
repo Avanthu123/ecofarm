@@ -10,34 +10,50 @@ import ResultsScreen from '../components/game/ResultsScreen';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Calendar, PlayCircle } from 'lucide-react';
+// Local static climate files (choose randomly among these)
+import mawsynram2024 from '../src/data/mawsynram-2024.json';
+import mawsynram2023 from '../src/data/mawsynram-2023.json';
+import mawsynram2022 from '../src/data/mawsynram-2022.json';
 
-// Fetch real NASA POWER API climate data for 14 weeks (June to September 2024, Mawsynram in Meghalaya)
+// Use local static climate files only. Randomly select one of the available years.
 const fetchClimateDataArray = async () => {
-  const lat = 25.2970; // Mawsynram latitude
-  const lon = 91.5822; // Mawsynram longitude
-  const start = '20240601';
-  const end = '20240930';
-  const url = `https://power.larc.nasa.gov/api/temporal/daily/point?start=${start}&end=${end}&latitude=${lat}&longitude=${lon}&community=RE&parameters=T2M,PRECTOTCORR,GWETPROF,ALLSKY_SFC_SW_DWN&format=JSON`;
+  const options = [mawsynram2024, mawsynram2023, mawsynram2022];
+  const selected = options[Math.floor(Math.random() * options.length)];
 
+  // If the selected file already contains a weeklyData array, use it directly
+  if (selected && selected.weeklyData && Array.isArray(selected.weeklyData)) {
+    return {
+      weeklyData: selected.weeklyData,
+      start: selected.start || (selected.header && selected.header.start) || null,
+      end: selected.end || (selected.header && selected.header.end) || null,
+      source: selected.source || `local-${selected.header?.start || 'unknown'}`
+    };
+  }
+
+  // Otherwise assume the file follows NASA POWER format and aggregate daily -> weekly
   try {
-    const response = await fetch(url);
-    const data = await response.json();
-    const properties = data.properties;
-    const dates = Object.keys(properties.parameter.T2M).sort();
+    const data = selected;
+    const properties = data.properties || data;
+    const t2m = properties.parameter && properties.parameter.T2M ? properties.parameter.T2M : {};
+    const prec = properties.parameter && properties.parameter.PRECTOTCORR ? properties.parameter.PRECTOTCORR : {};
+    const gw = properties.parameter && properties.parameter.GWETPROF ? properties.parameter.GWETPROF : {};
+    const irr = properties.parameter && properties.parameter.ALLSKY_SFC_SW_DWN ? properties.parameter.ALLSKY_SFC_SW_DWN : {};
+
+    const dates = Object.keys(t2m).sort();
     const weeklyData = [];
 
     for (let w = 0; w < 14; w++) {
       const weekStart = w * 7;
       const weekDays = dates.slice(weekStart, weekStart + 7);
-      let temp = 0, rain = 0, soil = 0, irr = 0;
+      let temp = 0, rain = 0, soil = 0, irrad = 0;
       let count = 0;
 
       for (const date of weekDays) {
-        if (properties.parameter.T2M[date] !== -999 && properties.parameter.T2M[date] != null) {
-          temp += properties.parameter.T2M[date];
-          rain += properties.parameter.PRECTOTCORR[date] || 0;
-          soil += properties.parameter.GWETPROF[date] || 0;
-          irr += properties.parameter.ALLSKY_SFC_SW_DWN[date] || 0;
+        if (t2m[date] !== -999 && t2m[date] != null) {
+          temp += t2m[date];
+          rain += prec[date] || 0;
+          soil += gw[date] || 0;
+          irrad += irr[date] || 0;
           count++;
         }
       }
@@ -47,21 +63,29 @@ const fetchClimateDataArray = async () => {
           week: w + 1,
           temperature: temp / count,
           rainfall: rain / count,
-          soilMoisture: (soil / count) * 100, // Convert to percentage
-          irradiance: irr / count
+          soilMoisture: (soil / count) * 100,
+          irradiance: irrad / count,
+          source: 'local'
         });
       } else {
-        // Fallback to simulated if no data
-        weeklyData.push(generateClimateDataFallback(w + 1));
+        const fb = generateClimateDataFallback(w + 1);
+        fb.source = 'fallback';
+        weeklyData.push(fb);
       }
     }
-    return weeklyData;
-  } catch (error) {
-    console.error('Failed to fetch NASA climate data:', error);
-    // Fallback to simulated data
+
+    const start = (data.header && data.header.start) || null;
+    const end = (data.header && data.header.end) || null;
+    return { weeklyData, start, end, source: `local-${start || 'unknown'}` };
+  } catch (e) {
+    // Fallback simulated data
     const arr = [];
-    for (let i = 1; i <= 14; i++) arr.push(generateClimateDataFallback(i));
-    return arr;
+    for (let i = 1; i <= 14; i++) {
+      const fb = generateClimateDataFallback(i);
+      fb.source = 'fallback';
+      arr.push(fb);
+    }
+    return { weeklyData: arr, start: null, end: null, source: 'fallback' };
   }
 };
 
@@ -101,6 +125,7 @@ export default function EcoFarmGame() {
   const [currentSession, setCurrentSession] = useState(null);
   const [climateData, setClimateData] = useState(null);
   const [climateDataArray, setClimateDataArray] = useState([]);
+  const [climateSourceInfo, setClimateSourceInfo] = useState(null);
   const [feedback, setFeedback] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [user, setUser] = useState(null);
@@ -119,6 +144,23 @@ export default function EcoFarmGame() {
 
   useEffect(() => {
     loadUser();
+  }, []);
+
+  // Fetch the full climate data array once on mount so we can display the timeline
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const res = await fetchClimateDataArray();
+        if (mounted) {
+          setClimateDataArray(res.weeklyData || []);
+          setClimateSourceInfo({ start: res.start, end: res.end, source: res.source });
+        }
+      } catch (e) {
+        // ignore - fallback is handled elsewhere
+      }
+    })();
+    return () => { mounted = false; };
   }, []);
 
   // Play background music when game starts (gameState changes to 'playing') or on menu
@@ -690,6 +732,9 @@ export default function EcoFarmGame() {
                 soilMoisture={currentSession?.soil_moisture}
                 healthScore={currentSession?.health_score}
                 climateData={climateData}
+                climateHistory={climateDataArray}
+                currentWeek={currentSession?.current_week}
+                climateSourceInfo={climateSourceInfo}
                 isNight={isResting}
               />
             </motion.div>
