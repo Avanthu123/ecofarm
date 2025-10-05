@@ -6,7 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 
 export default function StartMenu({ onStartGame }) {
   return (
-    <div className="min-h-screen flex items-center justify-center p-6" style={{ backgroundImage: "url('/images/bg.png')", backgroundSize: 'cover', backgroundPosition: 'center' }}>
+    <div className="min-h-screen flex items-center justify-center p-6" style={{ backgroundImage: "url('/images/gamebg.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }}>
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}

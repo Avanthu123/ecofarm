@@ -36,7 +36,7 @@ export default function ActionPanel({ onAction, disabled }) {
     <div className="space-y-4">
       <h3 className="text-lg font-bold text-gray-900">Your Action This Week</h3>
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {actions.map((action, index) => (
           <motion.div
             key={action.id}
@@ -48,8 +48,8 @@ export default function ActionPanel({ onAction, disabled }) {
           >
             <Button
               variant="menu"
-              style={{ width: '320px', height: '120px' }}
-              className={`flex flex-row items-center justify-start p-4 mb-4 md:mb-0 space-x-4 ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+              style={{ width: '280px', height: '100px' }}
+              className={`flex flex-row items-center justify-start p-3 mb-4 md:mb-0 space-x-8 ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
               onClick={() => !disabled && onAction(action.id)}
               disabled={disabled}
             >
@@ -57,10 +57,10 @@ export default function ActionPanel({ onAction, disabled }) {
                 <action.icon className={`w-8 h-8`} style={{ color: 'white' }} />
               </div>
               <div className="flex flex-col">
-                <h4 className={`text-xl md:text-2xl font-bold`} style={{ color: action.color.replace('bg-', '') }}>
+                <h4 className={`text-lg md:text-xl font-bold`} style={{ color: action.color.replace('bg-', '') }}>
                   {action.label.toUpperCase()}
                 </h4>
-                <p className={`text-xs md:text-sm`} style={{ color: action.color.replace('bg-', ''), opacity: 0.8 }}>
+                <p className={`text-xs md:text-xs`} style={{ color: action.color.replace('bg-', ''), opacity: 0.8 }}>
                   {action.description.toUpperCase()}
                 </p>
               </div>

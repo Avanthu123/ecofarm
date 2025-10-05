@@ -28,7 +28,7 @@ const GROWTH_STAGES = {
   }
 };
 
-export default function FarmPlot({ growthStage, soilMoisture, healthScore }) {
+export default function FarmPlot({ growthStage, soilMoisture, healthScore, climateData }) {
   const stage = GROWTH_STAGES[growthStage] || GROWTH_STAGES.seedling;
   
   const getSoilColor = () => {
@@ -42,41 +42,58 @@ export default function FarmPlot({ growthStage, soilMoisture, healthScore }) {
 
   return (
     <div className="relative w-full max-w-4xl mx-auto">
-      {/* Sky */}
-      <div className="h-32 bg-no-repeat bg-center bg-cover rounded-t-3xl" style={{ backgroundImage: "url('/images/bg.png')" }} />
-      
-      {/* Farm Plot */}
-      <div 
-        className="relative p-8 rounded-b-3xl shadow-2xl bg-no-repeat bg-center bg-cover"
-        style={{ 
-          backgroundImage: `url('/images/cropbg.jpg')`,
-          minHeight: '300px'
+      {/* Container with field or rainfield background */}
+      <div
+        className="relative rounded-3xl shadow-2xl bg-no-repeat bg-center bg-cover flex flex-col justify-end"
+        style={{
+          // Use rainfield only for heavy rainfall (>90mm). Otherwise show normal field.
+          backgroundImage: climateData && climateData.rainfall > 90 ? `url('/images/rainfield.png')` : `url('/images/field.png')`,
+          minHeight: '450px',
+          paddingTop: '32px',
+          paddingLeft: '32px',
+          paddingRight: '32px',
+          paddingBottom: '32px',
         }}
       >
+        {/* Sky */}
+        <div className="absolute top-0 left-0 right-0 h-32 bg-no-repeat bg-center bg-cover rounded-t-3xl" style={{ backgroundImage: "url('/images/bg.png')" }} />
+        
+        {/* Crop background covering bottom half */}
+        <div
+          className="absolute bottom-0 left-0 right-0 bg-no-repeat bg-center bg-cover rounded-b-3xl"
+          style={{
+            backgroundImage: `url('/images/cropbg.jpg')`,
+            height: '50%',
+            minHeight: '150px',
+          }}
+        />
+        
+        {/* Content over backgrounds */}
+        <div className="relative z-10 p-8" style={{ minHeight: '300px' }}>
         {/* Soil Moisture Indicator */}
         {soilMoisture > 70 && (
           <div className="absolute inset-0 bg-blue-400/20 rounded-b-3xl pointer-events-none" />
         )}
 
-        {/* Stage Label */}
-        <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm rounded-xl px-4 py-2 shadow-lg">
-          <div className="text-sm font-semibold text-gray-900">{stage.label}</div>
-          <div className="text-xs text-gray-600">{stage.description}</div>
-        </div>
-
-        {/* Health Indicator */}
-        <div className="absolute top-24 right-4 bg-white/90 backdrop-blur-sm rounded-xl px-4 py-2 shadow-lg" style={{ minWidth: '180px', minHeight: '56px' }}>
-          <div className="text-xs text-gray-600">Crop Health</div>
-          <div className="flex items-center gap-2">
-            <div className="status-bar-track" style={{ width: '120px', height: '12px', margin: '5px 0' }}>
-              <motion.div
-                className={`status-bar ${healthScore > 70 ? 'heart-color' : healthScore > 40 ? 'lightning-color' : 'heart-color'}`}
-                initial={{ width: 0 }}
-                animate={{ width: `${healthScore}%` }}
-                transition={{ duration: 0.5 }}
-              />
+        {/* Stage Label and Health Indicator in same line, smaller and on top */}
+        <div className="absolute top-2 left-4 right-4 flex justify-between items-center bg-white/90 backdrop-blur-sm rounded-xl px-3 py-1 shadow-lg text-sm">
+          <div>
+            <div className="font-semibold text-gray-900">{stage.label}</div>
+            <div className="text-xs text-gray-600">{stage.description}</div>
+          </div>
+          <div className="min-w-[140px]">
+            <div className="text-xs text-gray-600 mb-1">Crop Health</div>
+            <div className="flex items-center gap-2">
+              <div className="status-bar-track" style={{ width: '100px', height: '10px', margin: '0' }}>
+                <motion.div
+                  className={`status-bar ${healthScore > 70 ? 'heart-color' : healthScore > 40 ? 'lightning-color' : 'heart-color'}`}
+                  initial={{ width: 0 }}
+                  animate={{ width: `${healthScore}%` }}
+                  transition={{ duration: 0.5 }}
+                />
+              </div>
+              <span className="text-sm font-bold">{Math.round(healthScore)}%</span>
             </div>
-            <span className="text-sm font-bold">{Math.round(healthScore)}%</span>
           </div>
         </div>
 
@@ -131,6 +148,7 @@ export default function FarmPlot({ growthStage, soilMoisture, healthScore }) {
         {/* Soil Surface Detail */}
         {/* Removed the line below the box as requested */}
         {/* <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-900/50 via-yellow-900/50 to-amber-900/50" /> */}
+      </div>
       </div>
 
       {/* Ground Shadow */}
