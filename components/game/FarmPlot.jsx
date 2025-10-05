@@ -28,7 +28,7 @@ const GROWTH_STAGES = {
   }
 };
 
-export default function FarmPlot({ growthStage, soilMoisture, healthScore, climateData }) {
+export default function FarmPlot({ growthStage, soilMoisture, healthScore, climateData, isNight = false }) {
   const stage = GROWTH_STAGES[growthStage] || GROWTH_STAGES.seedling;
   
   const getSoilColor = () => {
@@ -46,8 +46,8 @@ export default function FarmPlot({ growthStage, soilMoisture, healthScore, clima
       <div
         className="relative rounded-3xl shadow-2xl bg-no-repeat bg-center bg-cover flex flex-col justify-end"
         style={{
-          // Use rainfield only for heavy rainfall (>90mm). Otherwise show normal field.
-          backgroundImage: climateData && climateData.rainfall > 90 ? `url('/images/rainfield.png')` : `url('/images/field.png')`,
+          // If resting (isNight) show nightfield, else use rainfield for heavy rainfall (>90mm) or normal field.
+          backgroundImage: isNight ? `url('/images/nightfield.png')` : (climateData && climateData.rainfall > 90 ? `url('/images/rainfield.png')` : `url('/images/field.png')`),
           minHeight: '450px',
           paddingTop: '32px',
           paddingLeft: '32px',

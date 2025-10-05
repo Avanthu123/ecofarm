@@ -2,7 +2,24 @@
 
 import React from 'react';
 
-export function Button({ children, variant = 'default', className = '', ...props }) {
+// Module-scoped click audio (created lazily to avoid SSR issues)
+let _clickAudio = null;
+
+function playClickSound() {
+  try {
+    if (typeof window === 'undefined') return;
+    if (!_clickAudio) {
+      _clickAudio = new Audio('/sounds/buttonclick.mp3');
+      _clickAudio.preload = 'auto';
+    }
+    _clickAudio.currentTime = 0;
+    _clickAudio.play().catch(() => {});
+  } catch (e) {
+    // ignore playback errors
+  }
+}
+
+export function Button({ children, variant = 'default', className = '', onClick, disabled, ...props }) {
   const baseClasses = 'inline-flex items-center justify-center text-sm font-bold uppercase transition-colors duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none';
 
   const variants = {
@@ -16,9 +33,17 @@ export function Button({ children, variant = 'default', className = '', ...props
     icon: 'game-button icon-button'
   };
 
+  const handleClick = (e) => {
+    if (disabled) return;
+    playClickSound();
+    if (typeof onClick === 'function') onClick(e);
+  };
+
   return (
     <button
       className={`${baseClasses} ${variants[variant] || variants.default} ${className}`}
+      onClick={handleClick}
+      disabled={disabled}
       {...props}
     >
       {children}

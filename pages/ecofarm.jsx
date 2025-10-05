@@ -113,6 +113,7 @@ export default function EcoFarmGame() {
   const audioRef = React.useRef(null);
   const irrigateSoundRef = React.useRef(null);
   const fertilizeSoundRef = React.useRef(null);
+  const restSoundRef = React.useRef(null);
   const buttonClickSoundRef = React.useRef(null);
   const popupSoundRef = React.useRef(null);
 
@@ -122,15 +123,35 @@ export default function EcoFarmGame() {
 
   // Play background music when game starts (gameState changes to 'playing') or on menu
   useEffect(() => {
-    if ((gameState === 'menu' || gameState === 'playing') && audioRef.current) {
-      audioRef.current.volume = 0.08; // consistent 80% reduction for better sound balance across all states
+      if ((gameState === 'menu' || gameState === 'playing') && audioRef.current) {
+      // Set background music to 70% volume so action sounds are more clearly heard
+      audioRef.current.volume = 0.5;
       audioRef.current.loop = true;
-      audioRef.current.play().catch(e => {
-        // Handle autoplay restrictions silently
-      });
-      if (gameState === 'playing') {
-        setShowWelcome(true);
-      }
+
+      // Try to play immediately; if browser blocks autoplay, wait for first user interaction
+      const tryPlay = async () => {
+        try {
+          await audioRef.current.play();
+        } catch (err) {
+          // Autoplay blocked - attach one-time listeners to resume on first user gesture
+          const resumeOnUserGesture = () => {
+            try {
+              audioRef.current.play().catch(() => {});
+            } catch (e) {}
+            window.removeEventListener('click', resumeOnUserGesture);
+            window.removeEventListener('keydown', resumeOnUserGesture);
+            window.removeEventListener('pointerdown', resumeOnUserGesture);
+          };
+          window.addEventListener('click', resumeOnUserGesture, { once: true });
+          window.addEventListener('keydown', resumeOnUserGesture, { once: true });
+          window.addEventListener('pointerdown', resumeOnUserGesture, { once: true });
+        }
+      };
+
+      tryPlay();
+
+      // Do not automatically show the welcome on every transition to 'playing'.
+      // The welcome should only appear when starting a new game (handled in startGame).
     }
   }, [gameState]);
 
@@ -148,6 +169,12 @@ export default function EcoFarmGame() {
       buttonClickSoundRef.current.currentTime = 0;
       buttonClickSoundRef.current.play().catch(() => {});
     }
+    // Ensure background music starts on this user gesture if it was blocked earlier
+    try {
+      if (audioRef.current) {
+        audioRef.current.play().catch(() => {});
+      }
+    } catch (e) {}
     setIsProcessing(true);
     const initialClimate = generateClimateData(1, climateDataArray);
 
@@ -165,6 +192,8 @@ export default function EcoFarmGame() {
     setCurrentSession(newSession);
     setClimateData(initialClimate);
     setGameState('playing');
+    // Show welcome instructions only when a new game is started
+    setShowWelcome(true);
     setIsProcessing(false);
   };
 
@@ -316,12 +345,35 @@ export default function EcoFarmGame() {
       }
     }
 
-    // Play sound effect for fertilize
+    // Play sound effect for fertilize at 2x speed with background ducking similar to irrigate
     if (action === 'fertilize' && fertilizeSoundRef.current) {
-      fertilizeSoundRef.current.currentTime = 0; // Reset to start
-      fertilizeSoundRef.current.play().catch(e => {
-        // Handle play restrictions silently
-      });
+      const f = fertilizeSoundRef.current;
+      const bgAudio = document.querySelector('audio[src="/sounds/gametheme.mp3"]');
+
+      if (bgAudio) {
+        const originalVolume = bgAudio.volume;
+        // Lower background music volume while fertilize sound plays
+        try { bgAudio.volume = 0.02; } catch (e) {}
+
+        try {
+          f.currentTime = 0;
+          f.playbackRate = 2.0;
+          f.play().catch(() => {});
+        } catch (e) {}
+
+        f.onended = () => {
+          try { bgAudio.volume = originalVolume; } catch (e) {}
+          try { f.playbackRate = 1.0; } catch (e) {}
+        };
+      } else {
+        // Fallback: just play the sound without ducking
+        try {
+          f.currentTime = 0;
+          f.playbackRate = 2.0;
+          f.play().catch(() => {});
+          f.onended = () => { try { f.playbackRate = 1.0; } catch (e) {} };
+        } catch (e) {}
+      }
     }
 
     const outcome = calculateOutcome(action, climateData, currentSession);
@@ -402,11 +454,44 @@ export default function EcoFarmGame() {
     };
 
     if (action === 'irrigate') {
-      setTimeout(showFeedback, 2000); // 2 seconds delay
+      // Irrigate: wait 2s for sound effects then show popup
+      setTimeout(showFeedback, 2000);
+    } else if (action === 'fertilize') {
+      // Fertilize: wait 2s (to let the 2x sped-up sound play) then show popup
+      setTimeout(showFeedback, 2000);
     } else if (action === 'rest') {
-      setTimeout(showFeedback, 1000); // 1 second delay for rest to show nightfield background
+      // Rest: show night background for 2s, play rest sound (with ducking), then show popup
+      setIsResting(true);
+
+      if (restSoundRef.current) {
+        const r = restSoundRef.current;
+        const bgAudio = document.querySelector('audio[src="/sounds/gametheme.mp3"]');
+        let originalVolume = null;
+
+        if (bgAudio) {
+          originalVolume = bgAudio.volume;
+          try { bgAudio.volume = 0.02; } catch (e) {}
+        }
+
+        try {
+          r.currentTime = 0;
+          r.play().catch(() => {});
+        } catch (e) {}
+
+        // Restore bg audio volume when rest sound ends (best-effort)
+        r.onended = () => {
+          if (bgAudio && originalVolume != null) {
+            try { bgAudio.volume = originalVolume; } catch (e) {}
+          }
+        };
+      }
+
+      setTimeout(() => {
+        setIsResting(false);
+        showFeedback();
+      }, 2000);
     } else {
-      showFeedback(); // Immediate for other actions
+      showFeedback();
     }
   };
 
@@ -484,6 +569,11 @@ export default function EcoFarmGame() {
       <audio
         ref={fertilizeSoundRef}
         src="/sounds/fertilize.mp3"
+        preload="auto"
+      />
+      <audio
+        ref={restSoundRef}
+        src="/sounds/rest.mp3"
         preload="auto"
       />
       <audio
@@ -589,17 +679,7 @@ export default function EcoFarmGame() {
         {/* Main Content */}
         <div className="grid lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-8 relative">
-            {isResting && (
-              <div
-                className="absolute inset-0 z-0 rounded-3xl pointer-events-none"
-                style={{
-                  backgroundImage: "url('/images/gamebg.jpg')",
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                  opacity: 0.7,
-                }}
-              />
-            )}
+            {/* Night background for rest is handled inside <FarmPlot /> via isNight prop */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -610,6 +690,7 @@ export default function EcoFarmGame() {
                 soilMoisture={currentSession?.soil_moisture}
                 healthScore={currentSession?.health_score}
                 climateData={climateData}
+                isNight={isResting}
               />
             </motion.div>
 
@@ -626,16 +707,7 @@ export default function EcoFarmGame() {
           </div>
 
           <div className="space-y-6">
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.4 }}
-            >
-              <ClimateDataDisplay
-                climateData={climateData}
-                week={currentSession?.current_week}
-              />
-            </motion.div>
+            {/* Right column intentionally left without duplicate ClimateDataDisplay */}
           </div>
         </div>
 

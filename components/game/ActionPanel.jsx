@@ -36,37 +36,37 @@ export default function ActionPanel({ onAction, disabled }) {
     <div className="space-y-4">
       <h3 className="text-lg font-bold text-gray-900">Your Action This Week</h3>
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {actions.map((action, index) => (
-          <motion.div
-            key={action.id}
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: index * 0.1 }}
-            whileHover={{ scale: disabled ? 1 : 1.05 }}
-            whileTap={{ scale: disabled ? 1 : 0.95 }}
-          >
-            <Button
-              variant="menu"
-              style={{ width: '280px', height: '100px' }}
-              className={`flex flex-row items-center justify-start p-3 mb-4 md:mb-0 space-x-8 ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-              onClick={() => !disabled && onAction(action.id)}
-              disabled={disabled}
+      <div className="flex flex-wrap justify-center gap-4 py-2">
+        {actions.map((action, index) => {
+          const Icon = action.icon;
+          return (
+            <motion.div
+              key={action.id}
+              
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: index * 0.1 }}
+              whileHover={{ scale: disabled ? 1 : 1.05 }}
+              whileTap={{ scale: disabled ? 1 : 0.95 }}
             >
-              <div className={`rounded-2xl flex items-center justify-center shadow-lg w-16 h-16 ${action.color}`}>
-                <action.icon className={`w-8 h-8`} style={{ color: 'white' }} />
-              </div>
-              <div className="flex flex-col">
-                <h4 className={`text-lg md:text-xl font-bold`} style={{ color: action.color.replace('bg-', '') }}>
-                  {action.label.toUpperCase()}
-                </h4>
-                <p className={`text-xs md:text-xs`} style={{ color: action.color.replace('bg-', ''), opacity: 0.8 }}>
-                  {action.description.toUpperCase()}
-                </p>
-              </div>
-            </Button>
-          </motion.div>
-        ))}
+              <Button
+                variant="menu"
+                className={`w-28 sm:w-[10.0rem] md:w-[16.0rem] min-w-6 h-12 flex items-center justify-center gap-2 px-4 py-2 mb-0 ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                onClick={() => !disabled && onAction(action.id)}
+                disabled={disabled}
+              >
+                <div className={`rounded-2xl flex items-center justify-center shadow-lg w-10 h-10 ${action.color}`}>
+                  <Icon className="w-4 h-4" style={{ color: 'white' }} />
+                </div>
+                <div className="flex flex-col items-center justify-center">
+                  <h4 className={`text-xs md:text-sm font-bold`} style={{ color: action.color.replace('bg-', '') }}>
+                    {action.label.toUpperCase()}
+                  </h4>
+                </div>
+              </Button>
+            </motion.div>
+          );
+        })}
       </div>
 
       <div className="bg-blue-100 border-2 border-blue-700 p-4 rounded-lg">
